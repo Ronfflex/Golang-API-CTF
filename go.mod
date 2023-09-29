@@ -1,4 +1,4 @@
-module github.com/Ronfflex/Golang-courses
+module github.com/Ronfflex/Golang-API-CTF
 
 go 1.21.1
 

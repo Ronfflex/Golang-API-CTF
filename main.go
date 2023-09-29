@@ -240,7 +240,7 @@ func main() {
 								Points:   100,
 							},
 							Protocol:  "MD5",
-							SecretKey: "Das Einfügen von Code aus dem Internet in Produktionscode ist",
+							SecretKey: "Pasting code from the Internet into production code is like chewing gum found in the street.",
 						},
 					}
 
