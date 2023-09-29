@@ -86,29 +86,30 @@ func FetchDetails(ip string, port int, path string) ResponseDetails {
 	}
 }
 
-func postBodyToCheckReponse(ip string, port int, path string, body PostBody) {
+func postBodyToCheckReponse(ip string, port int, path string, body PostBody) ([]byte, error) {
 	url := fmt.Sprintf("http://%s:%d%s", ip, port, path)
 
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
 		fmt.Println("Error marshaling body:", err)
-		return
+		return nil, err
 	}
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		fmt.Println("Error making POST request:", err)
-		return
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading POST response body:", err)
-		return
+		return nil, err
 	}
 
-	fmt.Println("POST Response:", string(respBody))
+	//fmt.Println("[EMPTY]", path, "Response:", string(respBody))
+	return respBody, nil
 }
 
 func main() {
@@ -150,7 +151,7 @@ func main() {
 
 	for _, port := range openPorts {
 		for _, path := range paths {
-			fmt.Println("Fetching details for port :", port,", path", path)
+			fmt.Println("Fetching details for port :", port, ", path", path)
 			details := FetchDetails(ip, port, path)
 
 			if details.Error != "" {
@@ -158,13 +159,57 @@ func main() {
 				break
 			}
 
-			fmt.Println("---------------------------------------------")
-			fmt.Println("Port", port,": Status :", details.Status)
-			fmt.Println("Port", port,": Headers :", details.Headers)
-			fmt.Println("Port", port,": Body :", details.Body)
-			fmt.Println("Making POST request with empty body...")
-			postBodyToCheckReponse(ip, port, path, PostBody{})
+			fmt.Println("------------------GETTING INFOS---------------------")
+			fmt.Println("Port", port, ": Status :", details.Status)
+			fmt.Println("Port", port, ": Headers :", details.Headers)
+			fmt.Println("Port", port, ": Body :", details.Body)
+			//fmt.Println("Making POST request with empty body...")
+			//postBodyToCheckReponse(ip, port, path, PostBody{}) // Empty body to check response
+
+			fmt.Println("----------------POST ON KNOWN ROUTES-----------------")
+			respBody, err := postBodyToCheckReponse(ip, port, "/signup", PostBody{User: "testUser"})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/signup Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/check", PostBody{User: "testUser"})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/check Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/getUserSecret", PostBody{User: "testUser"})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/getUserSecret Response:", string(respBody))
+
+			secret := string(respBody)
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/getUserLevel", PostBody{User: "testUser", Secret: secret})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/getUserLevel Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/getUserPoints", PostBody{User: "testUser", Secret: secret})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/getUserPoints Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/iNeedAHint", PostBody{})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/iNeedAHint Response:", string(respBody))
 		}
 	}
-
 }
