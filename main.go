@@ -17,6 +17,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Challenge struct {
+	Username string `json:"Username"`
+	Secret   string `json:"Secret"`
+	Points   int    `json:"Points"`
+}
+
+type Content struct {
+	Level     int       `json:"Level"`
+	Challenge Challenge `json:"Challenge"`
+	Protocol  string    `json:"Protocol"`
+	SecretKey string    `json:"SecretKey"`
+}
+
+type SubmitSolutionBody struct {
+	User    string  `json:"User"`
+	Secret  string  `json:"Secret"`
+	Content Content `json:"Content"`
+}
+
 type ResponseDetails struct {
 	Status     string
 	StatusCode int
@@ -87,7 +106,7 @@ func FetchDetails(ip string, port int, path string) ResponseDetails {
 	}
 }
 
-func postBodyToCheckReponse(ip string, port int, path string, body PostBody) ([]byte, error) {
+func postBodyToCheckResponse(ip string, port int, path string, body interface{}) ([]byte, error) {
 	url := fmt.Sprintf("http://%s:%d%s", ip, port, path)
 
 	jsonBody, err := json.Marshal(body)
@@ -153,6 +172,7 @@ func main() {
 	for _, port := range openPorts {
 		user := "testUser"
 		var secret string
+		var userLevel int
 
 		for _, path := range paths {
 			fmt.Println("\n------------------GETTING INFOS OF", path, "---------------------")
@@ -173,7 +193,7 @@ func main() {
 
 			if path == "/getUserSecret" {
 				for {
-					respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+					respBody, err := postBodyToCheckResponse(ip, port, path, postBody)
 					fmt.Println(string(respBody))
 					if err != nil {
 						fmt.Println("Error:", err)
@@ -186,12 +206,55 @@ func main() {
 					//time.Sleep(1 * time.Second)
 				}
 			} else {
-				if path == "/getUserLevel" || path == "/getUserPoints" {
+				if path == "/getUserPoints" || path == "/iNeedAHint" || path == "/enterChallenge" {
 					postBody.Secret = secret
 				}
 
+				if path == "/getUserLevel" {
+					respBody, err := postBodyToCheckResponse(ip, port, path, postBody)
+					if err != nil {
+						fmt.Println("Error:", err)
+						break
+					}
+					respString := string(respBody)
+					fmt.Println(path, "Response:", respString)
+				
+					userLevel, err = strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(respString, "User level: ")))
+					if err != nil {
+						fmt.Println("Failed to parse user level:", err)
+						break
+					}
+					continue
+				}
+
+				if path == "/submitSolution" {
+					
+					solutionBody := SubmitSolutionBody{
+						User:   user,
+						Secret: secret,
+						Content: Content{
+							Level: userLevel,
+							Challenge: Challenge{
+								Username: user,
+								Secret:   secret,
+								Points:   100,
+							},
+							Protocol:  "MD5",
+							SecretKey: "Das Einfügen von Code aus dem Internet in Produktionscode ist",
+						},
+					}
+
+					respBody, err := postBodyToCheckResponse(ip, port, path, solutionBody)
+					if err != nil {
+						fmt.Println("Error:", err)
+						break
+					}
+					fmt.Println(path, "Response:", string(respBody))
+					continue
+				}
+
 				fmt.Println("--POST ON", path, "--")
-				respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+				respBody, err := postBodyToCheckResponse(ip, port, path, postBody)
 				if err != nil {
 					fmt.Println("Error:", err)
 					break
