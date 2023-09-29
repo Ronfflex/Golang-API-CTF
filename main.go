@@ -139,7 +139,7 @@ func main() {
 		log.Fatal("Error converting end port to integer: ", err)
 	}
 
-	paths := []string{"/ping", "/signup", "/check", "/getUserLevel", "/getUserPoints"}
+	paths := []string{"/ping", "/signup", "/check", "/getUserSecret", "/getUserLevel", "/getUserPoints", "/iNeedAHint", "/enterChallenge", "submitSolution"}
 
 	openPorts := FindOpenPorts(ip, startPort, endPort, timeout)
 	if len(openPorts) == 0 {
@@ -210,6 +210,20 @@ func main() {
 				return
 			}
 			fmt.Println("/iNeedAHint Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/enterChallenge", PostBody{})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/enterChallenge Response:", string(respBody))
+
+			respBody, err = postBodyToCheckReponse(ip, port, "/submitSolution", PostBody{})
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Println("/submitSolution Response:", string(respBody))
 		}
 	}
 }
