@@ -124,6 +124,8 @@ func main() {
 	timeoutMillisStr := os.Getenv("TIMEOUT")
 	timeoutMillis, err := strconv.Atoi(timeoutMillisStr)
 
+	paths := []string{"/ping", "/signup", "/check", "/getUserSecret", "/getUserLevel", "/getUserPoints", "/iNeedAHint", "/enterChallenge", "/submitSolution"}
+
 	if err != nil {
 		log.Fatal("Error converting timeout to integer: ", err)
 	}
@@ -138,8 +140,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Error converting end port to integer: ", err)
 	}
-
-	paths := []string{"/ping", "/signup", "/check", "/getUserSecret", "/getUserLevel", "/getUserPoints", "/iNeedAHint", "/enterChallenge", "submitSolution"}
 
 	openPorts := FindOpenPorts(ip, startPort, endPort, timeout)
 	if len(openPorts) == 0 {
@@ -166,64 +166,29 @@ func main() {
 			//fmt.Println("Making POST request with empty body...")
 			//postBodyToCheckReponse(ip, port, path, PostBody{}) // Empty body to check response
 
-			fmt.Println("----------------POST ON KNOWN ROUTES-----------------")
-			respBody, err := postBodyToCheckReponse(ip, port, "/signup", PostBody{User: "testUser"})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/signup Response:", string(respBody))
+			user := "testUser"
+			var secret string
 
-			respBody, err = postBodyToCheckReponse(ip, port, "/check", PostBody{User: "testUser"})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/check Response:", string(respBody))
+			for _, path := range paths {
+				postBody := PostBody{User: user}
+				if path == "/getUserLevel" || path == "/getUserPoints" {
+					postBody.Secret = secret
+					fmt.Println(postBody.Secret)
+				}
 
-			respBody, err = postBodyToCheckReponse(ip, port, "/getUserSecret", PostBody{User: "testUser"})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/getUserSecret Response:", string(respBody))
+				fmt.Println("----------------POST ON", path, "-----------------")
+				respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+				if err != nil {
+					fmt.Println("Error:", err)
+					break
+				}
 
-			secret := string(respBody)
+				if path == "/getUserSecret" {
+					secret = string(respBody)
+				}
 
-			respBody, err = postBodyToCheckReponse(ip, port, "/getUserLevel", PostBody{User: "testUser", Secret: secret})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
+				fmt.Println(path, "Response:", string(respBody))
 			}
-			fmt.Println("/getUserLevel Response:", string(respBody))
-
-			respBody, err = postBodyToCheckReponse(ip, port, "/getUserPoints", PostBody{User: "testUser", Secret: secret})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/getUserPoints Response:", string(respBody))
-
-			respBody, err = postBodyToCheckReponse(ip, port, "/iNeedAHint", PostBody{})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/iNeedAHint Response:", string(respBody))
-
-			respBody, err = postBodyToCheckReponse(ip, port, "/enterChallenge", PostBody{})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/enterChallenge Response:", string(respBody))
-
-			respBody, err = postBodyToCheckReponse(ip, port, "/submitSolution", PostBody{})
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
-			fmt.Println("/submitSolution Response:", string(respBody))
 		}
 	}
 }
