@@ -150,7 +150,11 @@ func main() {
 	}
 
 	for _, port := range openPorts {
+		user := "testUser"
+		var secret string
+
 		for _, path := range paths {
+			fmt.Println("\n------------------GETTING INFOS OF", path, "---------------------")
 			fmt.Println("Fetching details for port :", port, ", path", path)
 			details := FetchDetails(ip, port, path)
 
@@ -159,36 +163,29 @@ func main() {
 				break
 			}
 
-			fmt.Println("------------------GETTING INFOS---------------------")
+			fmt.Println("--GENERAL INFOS--")
 			fmt.Println("Port", port, ": Status :", details.Status)
 			fmt.Println("Port", port, ": Headers :", details.Headers)
 			fmt.Println("Port", port, ": Body :", details.Body)
-			//fmt.Println("Making POST request with empty body...")
-			//postBodyToCheckReponse(ip, port, path, PostBody{}) // Empty body to check response
 
-			user := "testUser"
-			var secret string
-
-			for _, path := range paths {
-				postBody := PostBody{User: user}
-				if path == "/getUserLevel" || path == "/getUserPoints" {
-					postBody.Secret = secret
-					fmt.Println(postBody.Secret)
-				}
-
-				fmt.Println("----------------POST ON", path, "-----------------")
-				respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
-				if err != nil {
-					fmt.Println("Error:", err)
-					break
-				}
-
-				if path == "/getUserSecret" {
-					secret = string(respBody)
-				}
-
-				fmt.Println(path, "Response:", string(respBody))
+			postBody := PostBody{User: user}
+			if path == "/getUserLevel" || path == "/getUserPoints" {
+				postBody.Secret = secret
+				fmt.Println(postBody.Secret)
 			}
+
+			fmt.Println("--POST ON", path, "--")
+			respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+			if err != nil {
+				fmt.Println("Error:", err)
+				break
+			}
+
+			if path == "/getUserSecret" {
+				secret = string(respBody)
+			}
+
+			fmt.Println(path, "Response:", string(respBody))
 		}
 	}
 }
