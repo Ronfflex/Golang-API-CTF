@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -169,23 +170,34 @@ func main() {
 			fmt.Println("Port", port, ": Body :", details.Body)
 
 			postBody := PostBody{User: user}
-			if path == "/getUserLevel" || path == "/getUserPoints" {
-				postBody.Secret = secret
-				fmt.Println(postBody.Secret)
-			}
-
-			fmt.Println("--POST ON", path, "--")
-			respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
-			if err != nil {
-				fmt.Println("Error:", err)
-				break
-			}
 
 			if path == "/getUserSecret" {
-				secret = string(respBody)
-			}
+				for {
+					respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+					fmt.Println(string(respBody))
+					if err != nil {
+						fmt.Println("Error:", err)
+						break
+					}
+					if string(respBody) != "Really don't feel like working today huh..." {
+						secret = strings.TrimSpace(strings.TrimPrefix(string(respBody), "User secret: "))
+						break
+					}
+					//time.Sleep(1 * time.Second)
+				}
+			} else {
+				if path == "/getUserLevel" || path == "/getUserPoints" {
+					postBody.Secret = secret
+				}
 
-			fmt.Println(path, "Response:", string(respBody))
+				fmt.Println("--POST ON", path, "--")
+				respBody, err := postBodyToCheckReponse(ip, port, path, postBody)
+				if err != nil {
+					fmt.Println("Error:", err)
+					break
+				}
+				fmt.Println(path, "Response:", string(respBody))
+			}
 		}
 	}
 }
