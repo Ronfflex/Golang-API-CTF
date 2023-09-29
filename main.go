@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -8,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,11 @@ type ResponseDetails struct {
 	Headers    map[string][]string
 	Body       string
 	Error      string
+}
+
+type PostBody struct {
+	User   string `json:"User,omitempty"`
+	Secret string `json:"Secret,omitempty"`
 }
 
 func CheckPort(host string, port int, timeout time.Duration) bool {
@@ -60,42 +66,49 @@ func FindOpenPorts(host string, start, end int, timeout time.Duration) []int {
 	return openPorts
 }
 
-func FetchDetails(ip string, port int, path string) *ResponseDetails {
-	responseDetails := &ResponseDetails{}
+func FetchDetails(ip string, port int, path string) ResponseDetails {
 	url := fmt.Sprintf("http://%s:%d%s", ip, port, path)
-
 	resp, err := http.Get(url)
 	if err != nil {
-		responseDetails.Error = err.Error()
-		return responseDetails
+		return ResponseDetails{Error: err.Error()}
 	}
+
 	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		responseDetails.Error = err.Error()
-		return responseDetails
+		return ResponseDetails{Error: err.Error()}
 	}
 
-	responseDetails.Status = resp.Status
-	responseDetails.Headers = resp.Header
-	responseDetails.Body = string(body)
-	return responseDetails
+	return ResponseDetails{
+		Status:  resp.Status,
+		Headers: resp.Header,
+		Body:    string(bodyBytes),
+	}
 }
 
-func postBodyToCheckReponse(ip string, port int, path string, body string) {
+func postBodyToCheckReponse(ip string, port int, path string, body PostBody) {
 	url := fmt.Sprintf("http://%s:%d%s", ip, port, path)
 
-	resp, err := http.Post(url, "application/json", strings.NewReader(body))
-
+	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		fmt.Println("Can't send POST to", url, ":", err)
+		fmt.Println("Error marshaling body:", err)
+		return
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		fmt.Println("Error making POST request:", err)
 		return
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
-	fmt.Println("Response for path", path, ":", string(respBody))
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading POST response body:", err)
+		return
+	}
+
+	fmt.Println("POST Response:", string(respBody))
 }
 
 func main() {
@@ -131,6 +144,8 @@ func main() {
 	if len(openPorts) == 0 {
 		fmt.Println("Couldn't find any open ports in the specified range.")
 		return
+	} else {
+		fmt.Println("Found open ports:", openPorts)
 	}
 
 	for _, port := range openPorts {
@@ -140,14 +155,15 @@ func main() {
 
 			if details.Error != "" {
 				fmt.Println("Port,", port, "Path", path, ":\n Error :", details.Error)
-				continue
+				break
 			}
 
+			fmt.Println("---------------------------------------------")
 			fmt.Println("Port", port,": Status :", details.Status)
 			fmt.Println("Port", port,": Headers :", details.Headers)
 			fmt.Println("Port", port,": Body :", details.Body)
-			postBodyToCheckReponse(ip, port, path, "{}")
-			fmt.Println("---------------------------------------------")
+			fmt.Println("Making POST request with empty body...")
+			postBodyToCheckReponse(ip, port, path, PostBody{})
 		}
 	}
 
