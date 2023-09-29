@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -82,6 +83,20 @@ func FetchDetails(ip string, port int, path string) *ResponseDetails {
 	return responseDetails
 }
 
+func postBodyToCheckReponse(ip string, port int, path string, body string) {
+	url := fmt.Sprintf("http://%s:%d%s", ip, port, path)
+
+	resp, err := http.Post(url, "application/json", strings.NewReader(body))
+
+	if err != nil {
+		fmt.Println("Can't send POST to", url, ":", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	fmt.Println("Response for path", path, ":", string(respBody))
+}
 
 func main() {
 	err := godotenv.Load()
@@ -110,7 +125,7 @@ func main() {
 		log.Fatal("Error converting end port to integer: ", err)
 	}
 
-	paths := []string{"/ping", "/signup", "/check"}
+	paths := []string{"/ping", "/signup", "/check", "/getUserLevel", "/getUserPoints"}
 
 	openPorts := FindOpenPorts(ip, startPort, endPort, timeout)
 	if len(openPorts) == 0 {
@@ -131,7 +146,9 @@ func main() {
 			fmt.Println("Port", port,": Status :", details.Status)
 			fmt.Println("Port", port,": Headers :", details.Headers)
 			fmt.Println("Port", port,": Body :", details.Body)
+			postBodyToCheckReponse(ip, port, path, "{}")
 			fmt.Println("---------------------------------------------")
 		}
 	}
+
 }
